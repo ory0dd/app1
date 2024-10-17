@@ -1,0 +1,1473 @@
+
+import React, { useState, useEffect, useRef, Suspense } from 'react'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Slider } from "@/components/ui/slider"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { motion, AnimatePresence } from "framer-motion"
+import { Home, Search, Library, Plus, ChevronLeft, ChevronRight, Bell, Users, Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, Laptop2, Volume, Maximize2, Heart, MessageCircle, DollarSign, MapPin, Headphones, Book, Video, RefreshCw, Mic, ShoppingCart, Image as ImageIcon, Music, Package, Calendar, Users as Community, Share2, Tv, MessageSquare, Zap, Star, Sparkles } from 'lucide-react'
+import InfiniteScroll from 'react-infinite-scroll-component'
+
+function ErrorBoundary({ children }) {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const errorHandler = (error) => {
+      console.error("Caught an error:", error);
+      setHasError(true);
+    };
+
+    window.addEventListener('error', errorHandler);
+
+    return () => {
+      window.removeEventListener('error', errorHandler);
+    };
+  }, []);
+
+  if (hasError) {
+    return <div>Something went wrong. Please refresh the page.</div>;
+  }
+
+  return children;
+}
+
+export default function EnhancedInteractiveMusicApp() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState('home')
+  const [items, setItems] = useState([])
+  const [hasMore, setHasMore] = useState(true)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTrack, setCurrentTrack] = useState(null)
+  const [volume, setVolume] = useState(70)
+  const [likedSongs, setLikedSongs] = useState([])
+  const [userTokens, setUserTokens] = useState(1000)
+  const [showTokenPurchaseDialog, setShowTokenPurchaseDialog] = useState(false)
+  const [visualizerActive, setVisualizerActive] = useState(false)
+  const audioRef = useRef(null)
+  const canvasRef = useRef(null)
+
+  const playlists = [
+    "Tus me gusta", "Disciple Round Table : What's new?", 
+    "Best of Dubstep (Samplifire Takeover)", "Disciple : What's new?",
+    "Riddim Lords (Whales Takeover)", "Mix diario 3", "Radar de Novedades",
+    "Radio de Ory", "Cx1", "Noche De Sexo", "Mix diario 2"
+  ]
+
+  const fetchMoreData = () => {
+    if (items.length >= 50) {
+      setHasMore(false)
+      return
+    }
+
+    setTimeout(() => {
+      setItems(items.concat(Array.from({ length: 5 }, () => generateRandomItem())))
+    }, 500)
+  }
+
+  useEffect(() => {
+    fetchMoreData()
+    setIsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100
+    }
+  }, [volume])
+
+  useEffect(() => {
+    if (visualizerActive && canvasRef.current && audioRef.current) {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+      const analyser = audioContext.createAnalyser()
+      const source = audioContext.createMediaElementSource(audioRef.current)
+      source.connect(analyser)
+      analyser.connect(audioContext.destination)
+
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext('2d')
+      const bufferLength = analyser.frequencyBinCount
+      const dataArray = new Uint8Array(bufferLength)
+
+      const draw = () => {
+        analyser.getByteFrequencyData(dataArray)
+        ctx.fillStyle = 'rgb(0, 0, 0)'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+        const barWidth = (canvas.width / bufferLength) * 2.5
+        let x = 0
+
+        for (let i = 0; i < bufferLength; i++) {
+          const barHeight = dataArray[i] / 2
+
+          ctx.fillStyle = `rgb(${barHeight + 100}, 50, 50)`
+          ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight)
+
+          x += barWidth + 1
+        }
+
+        requestAnimationFrame(draw)
+      }
+
+      draw()
+    }
+  }, [visualizerActive])
+
+  const generateRandomItem = () => {
+    const types = ['song', 'artists', 'localArtist', 'book', 'video', 'playlist', 'podcasts']
+    const randomType = types[Math.floor(Math.random() * types.length)]
+
+    switch (randomType) {
+      case 'song':
+        return {
+          type: 'song',
+          title: `Song ${Math.floor(Math.random() * 100)}`,
+          artist: `Artist ${Math.floor(Math.random() * 50)}`,
+          image: `/placeholder.svg?height=300&width=600&text=${encodeURIComponent('Song Cover')}`,
+          duration: `${Math.floor(Math.random() * 4) + 2}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
+          comments: Math.floor(Math.random() * 1000),
+          tokens: Math.floor(Math.random() * 500),
+          audio: 'https://example.com/audio.mp3' // Replace with actual audio URL
+        }
+      case 'artists':
+        return {
+          type: 'artists',
+          artists: Array.from({ length: 5 }, (_, i) => ({
+            name: `Artist ${Math.floor(Math.random() * 100)}`,
+            genre: ['Pop', 'Rock', 'Hip Hop', 'Electronic'][Math.floor(Math.random() * 4)],
+            image: `/placeholder.svg?height=150&width=150&text=${encodeURIComponent(`Artist ${i + 1}`)}`,
+            followers: Math.floor(Math.random() * 1000000)
+          }))
+        }
+      case 'localArtist':
+        return {
+          type: 'localArtist',
+          name: `Local Artist ${Math.floor(Math.random() * 100)}`,
+          distance: `${Math.floor(Math.random() * 10)} km away`,
+          image: `/placeholder.svg?height=300&width=600&text=${encodeURIComponent('Local Artist')}`,
+          genre: ['Jazz', 'Folk', 'Indie', 'Classical'][Math.floor(Math.random() * 4)],
+          question: `What's your favorite venue to perform in our city?`
+        }
+      case 'book':
+        return {
+          type: 'book',
+          title: `Book ${Math.floor(Math.random() * 100)}`,
+          author: `Author ${Math.floor(Math.random() * 50)}`,
+          image: `/placeholder.svg?height=400&width=400&text=${encodeURIComponent('Book Cover')}`,
+          description: "An exciting new audiobook release!"
+        }
+      case 'video':
+        return {
+          type: 'video',
+          title: `Music Video ${Math.floor(Math.random() * 100)}`,
+          artist: `Artist ${Math.floor(Math.random() * 50)}`,
+          image: `/placeholder.svg?height=600&width=400&text=${encodeURIComponent('Video Thumbnail')}`,
+          views: `${Math.floor(Math.random() * 1000000)} views`
+        }
+      case 'playlist':
+        return {
+          type: 'playlist',
+          title: `Playlist ${Math.floor(Math.random() * 100)}`,
+          description: "A curated selection of tracks",
+          tracks: [
+            { image: `/placeholder.svg?height=150&width=150&text=${encodeURIComponent('Track 1')}` },
+            { image: `/placeholder.svg?height=150&width=150&text=${encodeURIComponent('Track 2')}` },
+            { image: `/placeholder.svg?height=150&width=150&text=${encodeURIComponent('Track 3')}` },
+            { image: `/placeholder.svg?height=150&width=150&text=${encodeURIComponent('Track 4')}` }
+          ]
+        }
+      case 'podcasts':
+        return {
+          type: 'podcasts',
+          podcasts: Array.from({ length: 5 }, (_, i) => ({
+            title: `Podcast ${Math.floor(Math.random() * 100)}`,
+            host: `Host ${Math.floor(Math.random() * 50)}`,
+            image: `/placeholder.svg?height=150&width=150&text=${encodeURIComponent(`Podcast ${i + 1}`)}`,
+            category: ['Music', 'Technology', 'Culture', 'Science'][Math.floor(Math.random() * 4)]
+          }))
+        }
+      default:
+        return { type: 'unknown' }
+    }
+  }
+
+  const handlePlayPause = (track) => {
+    if (currentTrack && currentTrack.title === track.title) {
+      setIsPlaying(!isPlaying)
+    } else {
+      setCurrentTrack(track)
+      setIsPlaying(true)
+    }
+  }
+
+  const toggleLike = (track) => {
+    if (likedSongs.some(song => song.title === track.title)) {
+      setLikedSongs(likedSongs.filter(song => song.title !== track.title))
+    } else {
+      setLikedSongs([...likedSongs, track])
+    }
+  }
+
+  const purchaseTokens = (amount) => {
+    setUserTokens(userTokens + amount)
+    setShowTokenPurchaseDialog(false)
+  }
+
+  const renderItem = (item) => {
+    switch (item.type) {
+      case 'song':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="bg-gray-900 hover:bg-gray-800 transition-colors mb-6">
+              <CardContent className="p-6">
+                <div className="flex space-x-4">
+                  <img src={item.image} alt={item.title} className="w-24 h-24 object-cover rounded-md" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-xl text-white mb-1">{item.title}</h3>
+                    <p className="text-gray-400 mb-2">{item.artist}</p>
+                    <div className="flex items-center space-x-4">
+                      <Button 
+                        size="sm" 
+                        className="bg-white text-black hover:bg-gray-200"
+                        onClick={() => handlePlayPause(item)}
+                      >
+                        {currentTrack && currentTrack.title === item.title && isPlaying ? (
+                          <Pause className="h-4 w-4 mr-2" />
+                        ) : (
+                          <Play className="h-4 w-4 mr-2" />
+                        )}
+                        {currentTrack && currentTrack.title === item.title && isPlaying ? 'Pause' : 'Play'}
+                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="ghost" onClick={() => toggleLike(item)}>
+                              <Heart className={`h-4 w-4 mr-2 ${likedSongs.some(song => song.title === item.title) ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
+                              {likedSongs.some(song => song.title === item.title) ? 'Liked' : 'Like'}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{likedSongs.some(song => song.title === item.title) ? 'Remove from liked songs' : 'Add to liked songs'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Button size="sm" variant="ghost">
+                        <MessageCircle className="h-4 w-4 mr-2" /> {item.comments}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => {
+                        if (userTokens >= item.tokens) {
+                          setUserTokens(userTokens - item.tokens)
+                          // Logic to unlock premium content
+                        } else {
+                          setShowTokenPurchaseDialog(true)
+                        }
+                      }}>
+                        <DollarSign className="h-4 w-4 mr-2" /> {item.tokens}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-gray-400">{item.duration}</div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )
+      case 'artists':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="bg-gray-900 hover:bg-gray-800 transition-colors mb-6  overflow-hidden">
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-2xl text-white mb-4">Discover New Artists</h3>
+                <div className="flex space-x-4 overflow-x-auto pb-4">
+                  {item.artists.map((artist, index) => (
+                    <motion.div 
+                      key={index} 
+                      className="flex-shrink-0 w-32"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <img src={artist.image} alt={artist.name} className="w-32 h-32 object-cover rounded-md mb-2" />
+                      <p className="font-semibold text-white text-sm">{artist.name}</p>
+                      <p className="text-gray-400 text-xs">{artist.genre}</p>
+                      <Badge variant="secondary" className="mt-1">
+                        {artist.followers.toLocaleString()} followers
+                      </Badge>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )
+      case 'localArtist':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="bg-gray-900 hover:bg-gray-800 transition-colors mb-6">
+              <CardContent className="p-6">
+                <div className="flex space-x-4">
+                  <img src={item.image} alt={item.name} className="w-40 h-40 object-cover rounded-md" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-2xl text-white mb-1">{item.name}</h3>
+                    <p className="text-gray-400 mb-2">{item.genre}</p>
+                    <p className="text-gray-400 mb-4 flex items-center">
+                      <MapPin className="h-4 w-4 mr-2" /> {item.distance}
+                    </p>
+                    <Button size="sm" className="bg-white text-black hover:bg-gray-200 mb-4">Connect</Button>
+                    <div className="bg-gray-800 p-4 rounded-md">
+                      <p className="text-white mb-2">Ask {item.name}:</p>
+                      <p className="text-gray-400 italic">&quot;{item.question}&quot;</p>
+                      <Input className="mt-2 bg-gray-700 text-white" placeholder="Type your answer..." />
+                      <Button size="sm" className="mt-2">Send</Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )
+      case 'book':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="bg-gray-900 hover:bg-gray-800 transition-colors mb-6">
+              <CardContent className="p-6">
+                <div className="flex space-x-4">
+                  <img src={item.image} alt={item.title} className="w-40 h-40 object-cover rounded-md" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-2xl text-white mb-1">{item.title}</h3>
+                    <p className="text-gray-400 mb-2">By {item.author}</p>
+                    <p className="text-gray-400 mb-4">{item.description}</p>
+                    <Button size="sm" className="bg-white text-black hover:bg-gray-200">
+                      <Book className="h-4 w-4 mr-2" /> Read More
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )
+      case 'video':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="bg-gray-900 hover:bg-gray-800 transition-colors mb-6">
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center">
+                  <div className="relative w-full max-w-sm">
+                    <img src={item.image} alt={item.title} className="w-full object-cover rounded-md aspect-[2/3]" />
+                    <Button size="icon" className="absolute inset-0 m-auto rounded-full bg-white bg-opacity-50 hover:bg-opacity-75 transition-colors">
+                      <Play className="h-8 w-8 text-black" />
+                    </Button>
+                  </div>
+                  <div className="mt-4 text-center">
+                    <h3 className="font-semibold text-xl text-white mb-1">{item.title}</h3>
+                    <p className="text-gray-400 mb-2">{item.artist}</p>
+                    <p className="text-gray-400">{item.views}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )
+      case 'playlist':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="bg-gray-900 hover:bg-gray-800 transition-colors mb-6">
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-2xl text-white mb-2">{item.title}</h3>
+                <p className="text-gray-400 mb-4">{item.description}</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {item.tracks.map((track, index) => (
+                    <motion.img 
+                      key={index} 
+                      src={track.image} 
+                      alt={`Track ${index + 1}`} 
+                      className="w-full aspect-square object-cover rounded-md"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )
+      case 'podcasts':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="bg-gray-900 hover:bg-gray-800 transition-colors mb-6">
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-2xl text-white mb-4">Featured Podcasts</h3>
+                <div className="flex space-x-4 overflow-x-auto pb-4">
+                  {item.podcasts.map((podcast, index) => (
+                    <motion.div 
+                      key={index} 
+                      className="flex-shrink-0 w-32"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <img src={podcast.image} alt={podcast.title} className="w-32 h-32 object-cover rounded-md mb-2" />
+                      <p className="font-semibold text-white text-sm">{podcast.title}</p>
+                      <p className="text-gray-400 text-xs">{podcast.host}</p>
+                      <Badge variant="secondary" className="mt-1">
+                        {podcast.category}
+                      </Badge>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )
+      default:
+        return null
+    }
+  }
+
+  const refreshFeed = () => {
+    setItems([])
+    fetchMoreData()
+  }
+
+  const renderMarketplace = () => (
+    <div className="space-y-6">
+      <motion.h2 
+        className="text-3xl font-bold mb-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        Marketplace
+      </motion.h2>
+      <motion.div 
+        className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        {[
+          { name: 'Arte Digital', icon: <ImageIcon className="h-6 w-6" /> },
+          { name: 'Arte Físico', icon: <Package className="h-6 w-6" /> },
+          { name: 'Beats', icon: <Music className="h-6 w-6" /> },
+          { name: 'Sample Packs', icon: <Music className="h-6 w-6" /> },
+          { name: 'LUTs', icon: <Video className="h-6 w-6" /> },
+          { name: 'Libros', icon: <Book className="h-6 w-6" /> },
+          { name: 'Servicios', icon: <Users className="h-6 w-6" /> },
+        ].map((category, index) => (
+          <motion.div
+            key={index}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button variant="outline" className="h-24 w-full flex flex-col items-center justify-center">
+              {category.icon}
+              <span className="mt-2">{category.name}</span>
+            </Button>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      <motion.h2 
+        className="text-2xl font-semibold mb-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+      >
+        Destacados
+      </motion.h2>
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.6 }}
+      >
+        {[
+          { name: 'Obra Digital Exclusiva', artist: 'Artista Digital', price: 50, image: '/placeholder.svg?height=200&width=200' },
+          { name: 'Pack de Beats Hip-Hop', artist: 'Productor Famoso', price: 25, image: '/placeholder.svg?height=200&width=200' },
+          { name: 'Cuadro Original', artist: 'Pintor Emergente', price: 150, image: '/placeholder.svg?height=200&width=200' },
+          { name: 'LUTs Cinematográficos', artist: 'Colorista Pro', price: 30, image: '/placeholder.svg?height=200&width=200' },
+        ].map((item, index) => (
+          <motion.div
+            key={index}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Card className="bg-gray-800">
+              <CardContent className="p-4">
+                <img src={item.image} alt={item.name} className="w-full aspect-square object-cover rounded-md mb-2" />
+                <h3 className="font-semibold">{item.name}</h3>
+                <p className="text-sm text-gray-400">{item.artist}</p>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="font-bold">{item.price} tokens</span>
+                  <Button size="sm">Comprar</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>
+  )
+
+  const renderReels = () => (
+    <div className="space-y-6">
+      <motion.h2 
+        className="text-3xl font-bold mb-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        Reels Populares
+      </motion.h2>
+      <motion.div 
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        {Array.from({ length: 8 }).map((_, index) => (
+          <motion.div
+            key={index}
+            className="relative aspect-[9/16] bg-gray-800 rounded-lg overflow-hidden"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <img src={`/placeholder.svg?height=400&width=225&text=Reel ${index + 1}`} alt={`Reel ${index + 1}`} className="w-full h-full object-cover" />
+            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+              <p className="text-white font-semibold">Reel Title {index + 1}</p>
+              <p className="text-sm text-gray-300">Artist Name</p>
+            </div>
+            <Button size="icon" className="absolute top-2 right-2 rounded-full bg-white bg-opacity-50 hover:bg-opacity-75">
+              <Play className="h-4 w-4 text-black" />
+            </Button>
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>
+  )
+
+  const renderArtistProfile = () => {
+    const artistInfo = {
+      name: 'Artista Ejemplo',
+      username: '@artistaejemplo',
+      bio: 'Músico independiente, creador de contenido y amante del arte en todas sus formas.',
+      avatar: '/placeholder.svg?height=200&width=200',
+      coverImage: '/placeholder.svg?height=400&width=1200',
+      followers: 50000,
+      socialLinks: {
+        instagram: 'https://instagram.com/artistaejemplo',
+        twitter: 'https://twitter.com/artistaejemplo',
+        youtube: 'https://youtube.com/artistaejemplo'
+      }
+    }
+
+    const content = {
+      feed: [
+        { type: 'post', content: 'Nuevo álbum en camino. ¡Estén atentos!', likes: 1500, comments: 300 },
+        { type: 'photo', content: '/placeholder.svg?height=300&width=300', description: 'En el estudio', likes: 2000, comments: 450 },
+      ],
+      music: [
+        { title: 'Canción 1', plays: 1000000, duration: '3:45', tokens: 0 },
+        { title: 'Canción 2', plays: 750000, duration: '4:12', tokens: 0 },
+        { title: 'Canción 3', plays: 500000, duration: '3:30', tokens: 0 },
+      ],
+      events: [
+        { name: 'Concierto en Madrid', date: '2023-07-15', venue: 'Wizink Center' },
+        { name: 'Festival de Verano', date: '2023-08-20', venue: 'Parque del Retiro' },
+      ],
+      books: [
+        { title: 'Mi Vida en la Música', year: 2022, description: 'Autobiografía' },
+        { title: 'Técnicas de Composición', year: 2021, description: 'Libro educativo' },
+      ],
+      community: [
+        { name: 'Club de Fans Oficial', members: 5000 },
+        { name: 'Grupo de Covers', members: 2500 },
+      ],
+      podcasts: [
+        { title: 'Detrás de la Música', episodes: 50, description: 'Entrevistas con otros artistas' },
+        { title: 'Proceso Creativo', episodes: 30, description: 'Mi journey musical' },
+      ],
+      shorts: [
+        { title: 'Backstage Tour', views: 500000, duration: '0:30' },
+        { title: 'Sneak Peek Nuevo Single', views: 750000, duration: '0:15' },
+      ],
+    }
+
+    return (
+      <div className="space-y-6">
+        <motion.div 
+          className="relative mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <img src={artistInfo.coverImage} alt="Cover" className="w-full h-64 object-cover rounded-lg" />
+          <div className="absolute bottom-4 left-4 flex items-end space-x-4">
+            <Avatar className="w-32 h-32 border-4 border-black">
+              <AvatarImage src={artistInfo.avatar} alt={artistInfo.name} />
+              <AvatarFallback>{artistInfo.name[0]}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-4xl font-bold">{artistInfo.name}</h1>
+              <p className="text-xl text-gray-300">{artistInfo.username}</p>
+              <p>{artistInfo.followers.toLocaleString()} seguidores</p>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          className="flex justify-between items-center mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <p className="text-gray-300 max-w-2xl">{artistInfo.bio}</p>
+          <div className="flex space-x-2">
+            {Object.entries(artistInfo.socialLinks).map(([platform, url]) => (
+              <Button key={platform} variant="outline" size="sm" asChild>
+                <a href={url} target="_blank" rel="noopener noreferrer">{platform}</a>
+              </Button>
+            ))}
+          </div>
+        </motion.div>
+
+        <Tabs defaultValue="feed" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="feed"><Home className="mr-2 h-4 w-4" /> Feed</TabsTrigger>
+            <TabsTrigger value="music"><Music className="mr-2 h-4 w-4" /> Música</TabsTrigger>
+            <TabsTrigger value="events"><Calendar className="mr-2 h-4 w-4" /> Eventos</TabsTrigger>
+            <TabsTrigger value="books"><Book className="mr-2 h-4 w-4" /> Libros</TabsTrigger>
+            <TabsTrigger value="community"><Community className="mr-2 h-4 w-4" /> Comunidad</TabsTrigger>
+            <TabsTrigger value="podcasts"><Mic className="mr-2 h-4 w-4" /> Podcasts</TabsTrigger>
+            <TabsTrigger value="shorts"><Video className="mr-2 h-4 w-4" /> Shorts</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="feed">
+            <Card>
+              <CardHeader>
+                <CardTitle>Feed del Artista</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px]">
+                  {content.feed.map((item, index) => (
+                    <motion.div 
+                      key={index} 
+                      className="mb-4 p-4 bg-gray-800 rounded-lg"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                    >
+                      {item.type === 'post' ? (
+                        <p>{item.content}</p>
+                      ) : (
+                        <img src={item.content} alt={item.description} className="w-full rounded-lg mb-2" />
+                      )}
+                      <div className="flex justify-between text-sm text-gray-400 mt-2">
+                        <span>{item.likes} likes</span>
+                        <span>{item.comments} comentarios</span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="music">
+            <Card>
+              <CardHeader>
+                <CardTitle>Música</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {content.music.map((song, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="flex items-center justify-between mb-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <div className="flex items-center">
+                      <Button size="sm" variant="ghost"><Play className="h-4 w-4" /></Button>
+                      <div className="ml-2">
+                        <p className="font-medium">{song.title}</p>
+                        <p className="text-sm text-gray-400">{song.plays.toLocaleString()} reproducciones</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Slider
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={[song.tokens]}
+                        onValueChange={(value) => {
+                          const newMusic = [...content.music];
+                          newMusic[index].tokens = value[0];
+                          // Update content.music here if using state
+                        }}
+                        className="w-32"
+                      />
+                      <span>{song.tokens} tokens</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="events">
+            <Card>
+              <CardHeader>
+                <CardTitle>Próximos Eventos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {content.events.map((event, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="mb-4 p-4 bg-gray-800 rounded-lg"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <h3 className="font-bold">{event.name}</h3>
+                    <p className="text-sm text-gray-400">{event.date} - {event.venue}</p>
+                    <Button className="mt-2" size="sm">Comprar Entradas</Button>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="books">
+            <Card>
+              <CardHeader>
+                <CardTitle>Libros</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {content.books.map((book, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="mb-4 p-4 bg-gray-800 rounded-lg"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <h3 className="font-bold">{book.title}</h3>
+                    <p className="text-sm text-gray-400">{book.year} - {book.description}</p>
+                    <Button className="mt-2" size="sm">Más Información</Button>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="community">
+            <Card>
+              <CardHeader>
+                <CardTitle>Comunidad</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {content.community.map((group, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="mb-4 p-4 bg-gray-800 rounded-lg"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <h3 className="font-bold">{group.name}</h3>
+                    <p className="text-sm text-gray-400">{group.members} miembros</p>
+                    <Button className="mt-2" size="sm">Unirse</Button>
+                  </motion.div>
+                ))}
+                <Button className="w-full mt-4">Crear Nueva Comunidad</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="podcasts">
+            <Card>
+              <CardHeader>
+                <CardTitle>Podcasts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {content.podcasts.map((podcast, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="mb-4 p-4 bg-gray-800 rounded-lg"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <h3 className="font-bold">{podcast.title}</h3>
+                    <p className="text-sm text-gray-400">{podcast.episodes} episodios - {podcast.description}</p>
+                    <Button className="mt-2" size="sm">Escuchar</Button>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="shorts">
+            <Card>
+              <CardHeader>
+                <CardTitle>Shorts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  {content.shorts.map((short, index) => (
+                    <motion.div 
+                      key={index} 
+                      className="relative"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                    >
+                      <img src="/placeholder.svg?height=300&width=200" alt={short.title} className="w-full h-48 object-cover rounded-lg" />
+                      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+                        <p className="font-bold">{short.title}</p>
+                        <p className="text-sm text-gray-400">{short.views.toLocaleString()} views</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    )
+  }
+
+  const renderLiveStreaming = () => (
+    <div className="space-y-6">
+      <motion.h2 
+        className="text-3xl font-bold mb-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        Streaming en Vivo
+      </motion.h2>
+      <Tabs defaultValue="live" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="live">En Vivo</TabsTrigger>
+          <TabsTrigger value="explore">Explorar</TabsTrigger>
+          <TabsTrigger value="past">Streams Pasados</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="live">
+          <Card>
+            <CardHeader>
+              <CardTitle>Stream en Vivo Actual</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                className="aspect-video bg-gray-800 rounded-lg mb-4"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+              ></motion.div>
+              <motion.h3 
+                className="text-xl font-semibold mb-2"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                Título del Stream
+              </motion.h3>
+              <motion.p 
+                className="text-gray-400 mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
+                Artista Streaming
+              </motion.p>
+              <motion.div 
+                className="flex justify-between items-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+              >
+                <span>1.2k espectadores</span>
+                <Button>Donar Tokens</Button>
+              </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="explore">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            {Array.from({ length: 6 }).map((_, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="aspect-video bg-gray-800 rounded-lg mb-2"></div>
+                    <h3 className="font-semibold">Stream de Artista {index + 1}</h3>
+                    <p className="text-sm text-gray-400">500 espectadores</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="past">
+          <motion.div 
+            className="space-y-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            {Array.from({ length: 5 }).map((_, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card>
+                  <CardContent className="p-4 flex items-center space-x-4">
+                    <div className="w-24 h-16 bg-gray-800 rounded-lg"></div>
+                    <div>
+                      <h3 className="font-semibold">Stream Pasado {index + 1}</h3>
+                      <p className="text-sm text-gray-400">Hace {index + 1} días</p>
+                    </div>
+                    <Button className="ml-auto">Ver</Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+
+  const renderCommunitySpaces = () => (
+    <div className="space-y-6">
+      <motion.h2 
+        className="text-3xl font-bold mb-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        Espacios Comunitarios
+      </motion.h2>
+      <Tabs defaultValue="forums" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="forums">Foros y Grupos</TabsTrigger>
+          <TabsTrigger value="radar">Radar de Artistas</TabsTrigger>
+          <TabsTrigger value="collaboration">Collaboration Hub</TabsTrigger>
+          <TabsTrigger value="chat">Salas de Chat</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="forums">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            {Array.from({ length: 4 }).map((_, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Foro {index + 1}</CardTitle>
+                    <CardDescription>Descripción del foro o grupo</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-400 mb-2">1.2k miembros</p>
+                    <Button>Unirse</Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="radar">
+          <Card>
+            <CardHeader>
+              <CardTitle>Radar de Artistas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                className="aspect-square bg-gray-800 rounded-lg mb-4"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+              ></motion.div>
+              <motion.div 
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <motion.div
+                    key={index}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button variant="outline">Artista {index + 1}</Button>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="collaboration">
+          <Card>
+            <CardHeader>
+              <CardTitle>Collaboration Hub</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                className="space-y-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Card>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-2">Proyecto de Colaboración {index + 1}</h3>
+                        <p className="text-sm text-gray-400 mb-2">Buscando: Vocalista, Productor</p>
+                        <Button>Aplicar</Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chat">
+          <Card>
+            <CardHeader>
+              <CardTitle>Salas de Chat en Vivo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                className="space-y-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Card>
+                      <CardContent className="p-4 flex justify-between items-center">
+                        <div>
+                          <h3 className="font-semibold">Sala de Chat {index + 1}</h3>
+                          <p className="text-sm text-gray-400">50 participantes</p>
+                        </div>
+                        <Button>Unirse</Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+
+  const renderMessaging = () => (
+    <div className="space-y-6">
+      <motion.h2 
+        className="text-3xl font-bold mb-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        Sistema de Mensajería
+      </motion.h2>
+      <Tabs defaultValue="private" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="private">Chats Privados</TabsTrigger>
+          <TabsTrigger value="live">Salas de Chat en Vivo</TabsTrigger>
+          <TabsTrigger value="collab">Colaboraciones</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="private">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chats Privados</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                className="space-y-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Card>
+                      <CardContent className="p-4 flex items-center space-x-4">
+                        <Avatar>
+                          <AvatarImage src={`/placeholder.svg?height=40&width=40&text=U${index + 1}`} />
+                          <AvatarFallback>U{index + 1}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-semibold">Usuario {index + 1}</h3>
+                          <p className="text-sm text-gray-400">Último mensaje: Hace 2h</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="live">
+          <Card>
+            <CardHeader>
+              <CardTitle>Salas de Chat en Vivo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                className="space-y-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Card>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-2">Sala de Chat {index + 1}</h3>
+                        <p className="text-sm text-gray-400 mb-2">Tema: Música Electrónica</p>
+                        <Button>Unirse al Chat</Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="collab">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chats de Colaboración</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <motion.div 
+                className="space-y-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Card>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-2">Proyecto: Colaboración {index + 1}</h3>
+                        <p className="text-sm text-gray-400 mb-2">3 participantes</p>
+                        <Button>Abrir Chat</Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <ErrorBoundary>
+      <div className="flex flex-col h-screen bg-black text-white">
+        {/* Top bar */}
+        <motion.div 
+          className="flex justify-between items-center p-4 bg-gray-900"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex space-x-2">
+            <Button variant="ghost" size="icon"><ChevronLeft className="text-gray-400" /></Button>
+            <Button variant="ghost" size="icon"><ChevronRight className="text-gray-400" /></Button>
+          </div>
+          <div className="flex-1 max-w-xl px-4">
+            <Input type="search" placeholder="Search for artists, songs, podcasts..." className="bg-gray-800 text-white border-gray-700" />
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" className="text-white border-gray-600 hover:bg-gray-800">Explorar Premium</Button>
+            <Button variant="ghost" size="icon"><Bell className="text-gray-400" /></Button>
+            <Button variant="ghost" size="icon"><Users className="text-gray-400" /></Button>
+            <Avatar>
+              <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" />
+              <AvatarFallback>U</AvatarFallback>
+            </Avatar>
+          </div>
+        </motion.div>
+
+        {/* Main content */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left sidebar */}
+          <motion.div 
+            className="w-64 bg-gray-900 p-4"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex flex-col space-y-4">
+              <Button variant="ghost" className="justify-start text-gray-300 hover:text-white" onClick={() => setCurrentPage('home')}><Home className="mr-2" /> Inicio</Button>
+              <Button variant="ghost" className="justify-start text-gray-300 hover:text-white" onClick={() => setCurrentPage('search')}><Search className="mr-2" /> Buscar</Button>
+              <Button variant="ghost" className="justify-start text-gray-300 hover:text-white" onClick={() => setCurrentPage('library')}><Library className="mr-2" /> Tu biblioteca</Button>
+              <Button variant="ghost" className="justify-start text-gray-300 hover:text-white" onClick={() => setCurrentPage('marketplace')}><ShoppingCart className="mr-2" /> Marketplace</Button>
+              <Button variant="ghost" className="justify-start text-gray-300 hover:text-white" onClick={() => setCurrentPage('reels')}><Video className="mr-2" /> Reels</Button>
+              <Button variant="ghost" className="justify-start text-gray-300 hover:text-white" onClick={() => setCurrentPage('artist')}><Users className="mr-2" /> Perfil de Artista</Button>
+              <Button variant="ghost" className="justify-start text-gray-300 hover:text-white" onClick={() => setCurrentPage('streaming')}><Tv className="mr-2" /> Streaming en Vivo</Button>
+              <Button variant="ghost" className="justify-start text-gray-300 hover:text-white" onClick={() => setCurrentPage('community')}><Community className="mr-2" /> Espacios Comunitarios</Button>
+              <Button variant="ghost" className="justify-start text-gray-300 hover:text-white" onClick={() => setCurrentPage('messaging')}><MessageSquare className="mr-2" /> Mensajería</Button>
+            </div>
+            <div className="mt-6">
+              <Button variant="ghost" className="w-full justify-start text-gray-300 hover:text-white"><Plus className="mr-2" /> Crear playlist</Button>
+            </div>
+            <ScrollArea className="h-[calc(100vh-300px)] mt-4">
+              {playlists.map((playlist, index) => (
+                <Button key={index} variant="ghost" className="w-full justify-start py-1 text-gray-400 hover:text-white">
+                  {playlist}
+                </Button>
+              ))}
+            </ScrollArea>
+          </motion.div>
+
+          {/* Main content area */}
+          <motion.div 
+            className="flex-1 overflow-y-auto bg-gradient-to-b from-gray-900 to-black p-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            {currentPage === 'home' && (
+              <>
+                <motion.div 
+                  className="flex justify-between items-center mb-6"
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <h1 className="text-3xl font-bold text-white">Discover New Content</h1>
+                  <Button onClick={refreshFeed} variant="outline" size="icon" className="rounded-full">
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+
+                <InfiniteScroll
+                  dataLength={items.length}
+                  next={fetchMoreData}
+                  hasMore={hasMore}
+                  loader={<h4 className="text-center my-4 text-gray-400">Loading...</h4>}
+                  endMessage={
+                    <p className="text-center my-4 text-gray-400">
+                      <b>Yay! You have seen it all</b>
+                    </p>
+                  }
+                >
+                  <div className="space-y-6">
+                    {items.map((item, index) => (
+                      <div key={index}>
+                        {renderItem(item)}
+                      </div>
+                    ))}
+                  </div>
+                </InfiniteScroll>
+              </>
+            )}
+            {currentPage === 'marketplace' && renderMarketplace()}
+            {currentPage === 'reels' && renderReels()}
+            {currentPage === 'artist' && renderArtistProfile()}
+            {currentPage === 'streaming' && renderLiveStreaming()}
+            {currentPage === 'community' && renderCommunitySpaces()}
+            {currentPage === 'messaging' && renderMessaging()}
+          </motion.div>
+        </div>
+
+        {/* Playback controls */}
+        <motion.div 
+          className="bg-gray-900 border-t border-gray-800 p-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <img src="/placeholder.svg?height=56&width=56" alt="Current track" className="w-14 h-14 rounded" />
+              <div>
+                <p className="font-semibold text-white">{currentTrack ? currentTrack.title : 'No track selected'}</p>
+                <p className="text-sm text-gray-400">{currentTrack ? currentTrack.artist : 'Select a track to play'}</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button variant="ghost" size="icon" onClick={() => currentTrack && toggleLike(currentTrack)}>
+                  <Heart className={`${likedSongs.some(song => song.title === currentTrack?.title) ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center space-x-4 mb-2">
+                <Button variant="ghost" size="icon"><Shuffle className="text-gray-400 hover:text-white" /></Button>
+                <Button variant="ghost" size="icon"><SkipBack className="text-gray-400 hover:text-white" /></Button>
+                <Button 
+                  variant="default" 
+                  size="icon" 
+                  className="rounded-full bg-white text-black hover:bg-gray-200"
+                  onClick={() => setIsPlaying(!isPlaying)}
+                >
+                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                </Button>
+                <Button variant="ghost" size="icon"><SkipForward className="text-gray-400 hover:text-white" /></Button>
+                <Button variant="ghost" size="icon"><Repeat className="text-gray-400 hover:text-white" /></Button>
+              </div>
+              <div className="w-full max-w-md flex items-center space-x-2">
+                <span className="text-xs text-gray-400">0:00</span>
+                <div className="flex-1 h-1 bg-gray-700 rounded-full">
+                  <div className="w-1/3 h-full bg-white rounded-full"></div>
+                </div>
+                <span className="text-xs text-gray-400">3:30</span>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="icon"><Laptop2 className="text-gray-400 hover:text-white" /></Button>
+              <Button variant="ghost" size="icon"><Volume className="text-gray-400 hover:text-white" /></Button>
+              <Slider
+                min={0}
+                max={100}
+                step={1}
+                value={[volume]}
+                onValueChange={(value) => setVolume(value[0])}
+                className="w-24"
+              />
+              <Button variant="ghost" size="icon" onClick={() => setVisualizerActive(!visualizerActive)}>
+                <Zap className={`${visualizerActive ? 'text-yellow-400' : 'text-gray-400'} hover:text-white`} />
+              </Button>
+              <Button variant="ghost" size="icon"><Maximize2 className="text-gray-400 hover:text-white" /></Button>
+            </div>
+          </div>
+        </motion.div>
+
+        {visualizerActive && (
+          <motion.div 
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <canvas ref={canvasRef} width="800" height="400" className="rounded-lg" />
+          </motion.div>
+        )}
+
+        <audio ref={audioRef} src={currentTrack?.audio} />
+
+        <Dialog open={showTokenPurchaseDialog} onOpenChange={setShowTokenPurchaseDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Purchase Tokens</DialogTitle>
+              <DialogDescription>
+                You don't have enough tokens to unlock this content. Would you like to purchase more?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4">
+              <Button onClick={() => purchaseTokens(100)}>Buy 100 Tokens</Button>
+              <Button onClick={() => purchaseTokens(500)}>Buy 500 Tokens</Button>
+              <Button onClick={() => purchaseTokens(1000)}>Buy 1000 Tokens</Button>
+              <Button variant="outline" onClick={() => setShowTokenPurchaseDialog(false)}>Cancel</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </ErrorBoundary>
+  )
+}
